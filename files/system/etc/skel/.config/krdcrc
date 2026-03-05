@@ -1,7 +1,7 @@
 [Notification Messages]
 DoNotAskBeforeExit=false
 
-[hostpreferences][rdp://GH_SEC_RDP_ENDPOINT]
+[hostpreferences][rdp://PLACEHOLDER_RDP_ENDPOINT]
 keyboardLayout=13
 shareMedia=
 showConfigAgain=false

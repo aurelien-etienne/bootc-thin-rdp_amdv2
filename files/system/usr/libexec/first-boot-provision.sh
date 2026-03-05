@@ -219,14 +219,26 @@ while true; do
     echo "Invalid format. Use IP/prefix notation (e.g. 10.100.0.2/24)."
 done
 
+while true; do
+    read -r -p "WireGuard server endpoint (host:port, e.g. vpn.example.com:51820): " server_endpoint
+    [[ "$server_endpoint" =~ ^[^:]+:[0-9]+$ ]] && break
+    echo "Invalid format. Use host:port notation (e.g. vpn.example.com:51820)."
+done
+
+while true; do
+    read -r -p "WireGuard AllowedIPs (CIDR, e.g. 10.8.0.0/24): " allowed_ips
+    [[ "$allowed_ips" =~ ^[0-9./]+(,[0-9./]+)*$ ]] && break
+    echo "Invalid format. Use CIDR notation (e.g. 10.8.0.0/24)."
+done
+
 server_pubkey=$(sed -n 's/^PublicKey = //p' /etc/wireguard/wg0.conf)
-server_endpoint=$(sed -n 's/^Endpoint = //p' /etc/wireguard/wg0.conf)
-allowed_ips=$(sed -n 's/^AllowedIPs = //p' /etc/wireguard/wg0.conf)
 
 sed -i \
     -e "s|PLACEHOLDER_PRIVATE_KEY|${private_key}|" \
     -e "s|PLACEHOLDER_CLIENT_ADDRESS|${wg_client_address}|" \
     -e "s|PLACEHOLDER_PRESHARED_KEY|${preshared_key}|" \
+    -e "s|PLACEHOLDER_WG_ENDPOINT|${server_endpoint}|" \
+    -e "s|PLACEHOLDER_WG_ALLOWEDIPS|${allowed_ips}|" \
     /etc/wireguard/wg0.conf
 chmod 600 /etc/wireguard/wg0.conf
 
@@ -268,6 +280,20 @@ NMEOF
 chmod 600 /etc/NetworkManager/system-connections/wg0.nmconnection
 
 unset private_key preshared_key wg_client_address server_pubkey server_endpoint allowed_ips nm_allowed_ips
+
+# --- RDP ---
+clear
+echo "========================================"
+echo "          RDP Configuration"
+echo "========================================"
+echo ""
+read -r -p "RDP server endpoint (host or host:port): " rdp_endpoint
+
+user_config="/home/${username}/.config"
+sed -i "s|PLACEHOLDER_RDP_ENDPOINT|${rdp_endpoint}|g" "${user_config}/krdcrc"
+sed -i "s|PLACEHOLDER_RDP_ENDPOINT|${rdp_endpoint}|g" "${user_config}/autostart/org.kde.krdc.desktop"
+
+unset rdp_endpoint user_config
 
 touch /var/lib/first-boot-provisioned
 
