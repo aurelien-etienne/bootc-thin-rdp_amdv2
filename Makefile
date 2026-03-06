@@ -81,42 +81,6 @@ iso:
 qcow2:
 	make bib_image IMAGE_TYPE=qcow2
 
-run-qemu-qcow:
-	qemu-system-x86_64 \
-		-M accel=kvm \
-		-cpu host \
-		-smp 2 \
-		-m 4096 \
-		-bios /usr/share/OVMF/x64/OVMF.4m.fd \
-		-serial stdio \
-		-snapshot $(QEMU_DISK_QCOW2)
-
-run-qemu-iso:
-	mkdir -p ./output
-	# Make a disk to install to
-	[[ ! -e $(QEMU_DISK_RAW) ]] && dd if=/dev/null of=$(QEMU_DISK_RAW) bs=1M seek=20480
-
-	qemu-system-x86_64 \
-		-M accel=kvm \
-		-cpu host \
-		-smp 2 \
-		-m 4096 \
-		-bios /usr/share/OVMF/x64/OVMF.4m.fd \
-		-serial stdio \
-		-boot d \
-		-cdrom $(QEMU_ISO) \
-		-hda $(QEMU_DISK_RAW)
-
-run-qemu:
-	qemu-system-x86_64 \
-		-M accel=kvm \
-		-cpu host \
-		-smp 2 \
-		-m 4096 \
-		-bios /usr/share/OVMF/x64/OVMF.4m.fd \
-		-serial stdio \
-		-hda $(QEMU_DISK_RAW)
-
 vm:
 	cp -f output/bootiso/install.iso $(LIBVIRT_ISO)
 	if virsh dominfo $(LIBVIRT_DOMAIN); then

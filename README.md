@@ -8,7 +8,7 @@ An [AlmaLinux 10](https://almalinux.org/) bootc-based OS image for RDP thin clie
 - **KRDC** auto-launches on login and connects to the configured RDP server
 - **WireGuard** VPN auto-connects on boot (split-tunnel)
 - **LUKS2** full disk encryption with optional TPM2 enrollment
-- **First-boot provisioning**: interactive setup (user account, LUKS passphrase, WireGuard key generation and VPN address)
+- **First-boot provisioning**: interactive setup — hostname generation (MAC-based), admin + auto-login user creation, LUKS rekey with recovery key (QR code displayed) and optional TPM2/PIN enrollment, WireGuard keypair generation and VPN configuration, RDP server configuration
 - **Firewall**: default-drop on all interfaces; wg0 placed in the trusted zone
 - Belgian French locale (`fr_BE.UTF-8`, `be-latin1` keyboard)
 - Automatic bootc update checks
@@ -23,10 +23,12 @@ files/
     12-firewall.sh    # firewalld default-drop zone, enabled at boot
     20-provisioning.sh  # WireGuard file permissions, enable first-boot service
     50-branding.sh    # KDE theme setup
-    89-initramfs.sh   # Dracut rebuild for TPM2
+    89-initramfs.sh   # Dracut rebuild for custom be-latin1 keymap (LUKS unlock prompt)
   system/           # Files copied verbatim into the image filesystem
-    etc/wireguard/wg0.conf        # WireGuard template (server values from CI secrets)
-    etc/polkit-1/rules.d/         # NM polkit rules: wg0 locked, WiFi free
+    etc/wireguard/wg0.conf        # WireGuard template (server pubkey substituted at build time)
+    etc/NetworkManager/conf.d/    # Prevents NetworkManager from managing the WireGuard interface
+    etc/ssh/sshd_config.d/        # SSH hardening for the kiosk
+    etc/sudoers.d/                # Wheel group nopasswd
     etc/skel/.config/             # KDE user defaults (power, screen lock, KRDC, KWallet)
     etc/systemd/system/           # first-boot-provision service + bootc update override
     usr/libexec/first-boot-provision.sh  # Interactive first-boot provisioning script
@@ -40,12 +42,18 @@ Makefile            # Local build and testing targets
 
 GitHub Actions builds and pushes the container image to GHCR on every push to `main`. The ISO is built manually via the `build-iso` workflow.
 
+### Required variables
+
+| Variable | Description |
+|--------|-------------|
+| `SSH_AUTHORIZED_KEYS` | `authorized_key` file contents |
+| `WG_PUBLIC_KEY` | WireGuard server public key |
+
 ### Required secrets
 
 | Secret | Description |
 |--------|-------------|
 | `SIGNING_SECRET` | Cosign private key for image signing |
-| `WG_PUBLIC_KEY` | WireGuard server public key |
 | `LUKS_PLACEHOLDER_PASS` | LUKS passphrase used by the Anaconda installer during ISO install |
 
 ## Local development
@@ -56,8 +64,6 @@ The `image` target substitutes CI secrets with local test values before building
 make image        # Build the container image (requires sudo + podman)
 make iso          # Build a bootable ISO via bootc-image-builder
 make qcow2        # Build a QCOW2 disk image
-make run-qemu-iso # Boot the ISO in QEMU for testing (creates a virtual disk)
-make run-qemu     # Boot the installed disk image in QEMU
 make vm           # Deploy ISO to a libvirt VM
 make vm-tpm       # Same with TPM2 (Secure Boot in setup mode)
 make vm-tpm-sb    # Same with TPM2 and Secure Boot enforced
