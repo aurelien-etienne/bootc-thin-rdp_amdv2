@@ -4,6 +4,17 @@ set -euo pipefail
 
 setfont sun12x22
 
+# --- Hostname ---
+primary_iface=$(ip route show default 2>/dev/null | awk '{print $5; exit}')
+mac=$(cat "/sys/class/net/${primary_iface}/address" 2>/dev/null \
+      || ip link show | awk '/ether/ {print $2; exit}')
+mac_suffix=${mac//:/}
+mac_suffix=${mac_suffix: -6}
+machine_hostname="assfisc-client-${mac_suffix}"
+hostnamectl set-hostname "$machine_hostname"
+echo "Hostname set to: $machine_hostname"
+unset primary_iface mac mac_suffix machine_hostname
+
 cleanup() {
     [[ -f /var/lib/first-boot-provisioned ]] && return
 
@@ -24,6 +35,30 @@ cleanup() {
 }
 
 trap cleanup EXIT
+
+# --- Admin provisioning ---
+while true; do
+    echo
+    read -r -s -p "Enter desired admin password: " admin_password
+    echo
+    read -r -s -p "Confirm admin password: " admin_password_confirm
+    echo
+    if [[ "$admin_password" != "$admin_password_confirm" ]]; then
+        echo "Passwords do not match, try again."
+        continue
+    fi
+    if [[ ${#admin_password} -ge 8 ]]; then
+        break
+    else
+        echo "Password must be at least 8 characters."
+    fi
+done
+
+admin_hashed_password=$(echo "$admin_password" | openssl passwd -6 -stdin)
+groupadd --gid 1001 admin
+useradd -u 1001 -g 1001 -G wheel -p "$admin_hashed_password" admin
+unset admin_password admin_password_confirm admin_hashed_password
+chmod 600 /home/admin/.ssh/authorized_keys
 
 # --- User provisioning ---
 username="user"
@@ -231,8 +266,6 @@ while true; do
     echo "Invalid format. Use CIDR notation (e.g. 10.8.0.0/24)."
 done
 
-server_pubkey=$(sed -n 's/^PublicKey = //p' /etc/wireguard/wg0.conf)
-
 sed -i \
     -e "s|PLACEHOLDER_PRIVATE_KEY|${private_key}|" \
     -e "s|PLACEHOLDER_CLIENT_ADDRESS|${wg_client_address}|" \
@@ -241,45 +274,9 @@ sed -i \
     -e "s|PLACEHOLDER_WG_ALLOWEDIPS|${allowed_ips}|" \
     /etc/wireguard/wg0.conf
 chmod 600 /etc/wireguard/wg0.conf
+systemctl enable wg-quick@wg0.service
 
-# Convert AllowedIPs to NM semicolon-delimited format (with trailing semicolon)
-nm_allowed_ips=$(echo "${allowed_ips}" | tr -d ' ' | sed 's/,/;/g')
-nm_allowed_ips="${nm_allowed_ips%;};"
-
-# Write NetworkManager keyfile for auto-connect WireGuard.
-mkdir -p /etc/NetworkManager/system-connections
-cat > /etc/NetworkManager/system-connections/wg0.nmconnection << NMEOF
-[connection]
-id=wg0
-type=wireguard
-interface-name=wg0
-autoconnect=yes
-autoconnect-priority=0
-zone=trusted
-
-[wireguard]
-private-key=${private_key}
-private-key-flags=0
-
-[wireguard-peer.${server_pubkey}]
-endpoint=${server_endpoint}
-allowed-ips=${nm_allowed_ips}
-preshared-key=${preshared_key}
-preshared-key-flags=0
-persistent-keepalive=25
-
-[ipv4]
-address1=${wg_client_address}
-method=manual
-never-default=true
-route-metric=200
-
-[ipv6]
-method=disabled
-NMEOF
-chmod 600 /etc/NetworkManager/system-connections/wg0.nmconnection
-
-unset private_key preshared_key wg_client_address server_pubkey server_endpoint allowed_ips nm_allowed_ips
+unset private_key preshared_key wg_client_address server_endpoint allowed_ips
 
 # --- RDP ---
 clear

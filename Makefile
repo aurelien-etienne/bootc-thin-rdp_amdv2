@@ -25,7 +25,11 @@ image:
 	# This is just to make sure I have a successful sudo before I run sed
 	$(SUDO) echo
 
+	# Local dev: add bogus wireguard pubkey + disable firewalld + add own public key
 	sed -i 's|PublicKey = GH_SEC_WG_PUBLIC_KEY|PublicKey = /s8cFxU/uc2B9wonFTySaznAjyM5Vtlhs0JY+KnKFww=|' ./files/system/etc/wireguard/wg0.conf
+	echo 'systemctl disable firewalld.service' >> files/scripts/12-firewall.sh
+	mkdir -p ./files/system/etc/skel/.ssh
+	cat ~/.ssh/id_ed25519.pub > ./files/system/etc/skel/.ssh/authorized_keys
 
 	$(PODMAN) build \
 		--security-opt=label=disable \
@@ -39,6 +43,8 @@ image:
 		.
 
 	sed -i 's|PublicKey = /s8cFxU/uc2B9wonFTySaznAjyM5Vtlhs0JY+KnKFww=|PublicKey = GH_SEC_WG_PUBLIC_KEY|' ./files/system/etc/wireguard/wg0.conf
+	sed -i '/systemctl disable firewalld.service/d' ./files/scripts/12-firewall.sh
+	rm -rf ./files/system/etc/skel/.ssh
 
 bib_image:
 	$(SUDO) rm -rf ./output

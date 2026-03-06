@@ -23,7 +23,9 @@ dnf install -y \
     krdc \
     wireguard-tools \
     qrencode \
-    firewalld
+    firewalld \
+    konsole \
+    xorg-x11-xauth
 
 # Unnecessary things
 dnf remove -y \
@@ -48,3 +50,7 @@ dnf remove -y \
 
 # TZ
 ln -sf /usr/share/zoneinfo/Europe/Brussels /etc/localtime
+
+# Change konsole's perms and ownership
+chown root:wheel /usr/bin/konsole
+chmod 750 /usr/bin/konsole

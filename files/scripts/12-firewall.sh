@@ -2,7 +2,8 @@
 
 set -xeuo pipefail
 
-firewall-offline-cmd --set-default-zone=drop
-# firewall-offline-cmd --zone=drop --remove-service=ssh
-
 systemctl enable firewalld.service
+
+firewall-offline-cmd --set-default-zone=drop
+firewall-offline-cmd --zone=drop --remove-service-from-zone=ssh
+firewall-offline-cmd --zone=trusted --add-service=ssh
