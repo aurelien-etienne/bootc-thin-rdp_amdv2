@@ -3,6 +3,7 @@ SUDO = sudo
 PODMAN = $(SUDO) podman
 
 IMAGE_NAME ?= localhost/bootc-images/alma
+ISO_IMAGE ?= quay.io/almalinuxorg/almalinux-bootc:9
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?= kde
 IMAGE_CONFIG ?= ./iso.toml
@@ -51,14 +52,15 @@ bib_image:
 	mkdir -p ./output
 
 	cp $(IMAGE_CONFIG) ./output/config.toml
-	# Don't bother trying to switch to a new image, this is just for local testing
-	sed -i '/bootc switch/d' ./output/config.toml
+	sed -i 's#<UPDATE_IMAGE_REF>#ghcr.io/beokko/assfisc-thin-client:latest#g' ./output/config.toml
 
 	if [ "$(IMAGE_TYPE)" = "iso" ]; then
 		LIBREPO=False;
 	else
 		LIBREPO=True;
 	fi;
+
+	$(PODMAN) pull $(ISO_IMAGE)
 
 	$(PODMAN) run \
 		--rm \
@@ -73,7 +75,7 @@ bib_image:
 		--type $(IMAGE_TYPE) \
 		--use-librepo=$$LIBREPO \
 		--progress verbose \
-		$(IMAGE_NAME)
+		$(ISO_IMAGE)
 
 iso:
 	make bib_image IMAGE_TYPE=iso
@@ -94,6 +96,7 @@ vm:
 		--osinfo almalinux10 \
 		-n $(LIBVIRT_DOMAIN) \
 		--memory 2048 \
+		--cpu IvyBridge-v2 \
 		--vcpus 2 \
 		--cdrom $(LIBVIRT_ISO) \
 		--disk $(LIBVIRT_QCOW2) \
@@ -116,6 +119,7 @@ vm-tpm:
 		--boot uefi,firmware.feature0.name=secure-boot,firmware.feature0.enabled=yes,firmware.feature1.name=enrolled-keys,firmware.feature1.enabled=no \
 		--tpm default \
 		--memory 2048 \
+		--cpu IvyBridge-v2 \
 		--vcpus 2 \
 		--cdrom $(LIBVIRT_ISO) \
 		--disk $(LIBVIRT_QCOW2) \
@@ -138,6 +142,7 @@ vm-tpm-sb:
 		--boot uefi,firmware.feature0.name=secure-boot,firmware.feature0.enabled=yes,firmware.feature1.name=enrolled-keys,firmware.feature1.enabled=yes \
 		--tpm default \
 		--memory 2048 \
+		--cpu IvyBridge-v2 \
 		--vcpus 2 \
 		--cdrom $(LIBVIRT_ISO) \
 		--disk $(LIBVIRT_QCOW2) \
