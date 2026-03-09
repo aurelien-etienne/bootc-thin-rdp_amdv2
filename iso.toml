@@ -24,7 +24,6 @@ systemctl set-default graphical.target
 cat > /etc/systemd/system/rebase.service << 'EOF'
 [Unit]
 Description=First boot bootc switch to AlmaLinux 10
-SuccessAction=reboot
 StartLimitIntervalSec=0
 
 [Service]
@@ -32,8 +31,9 @@ Type=oneshot
 Restart=on-failure
 RestartSec=30
 ExecStartPre=/usr/bin/rm -f /etc/vconsole.conf /etc/locale.conf
-ExecStart=/usr/bin/bootc switch --quiet --transport registry ghcr.io/beokko/assfisc-thin-client:latest
+ExecStart=/usr/bin/bootc switch --transport registry <UPDATE_IMAGE_REF>
 ExecStartPost=/usr/bin/systemctl disable rebase.service
+ExecStartPost=/usr/bin/systemctl reboot
 
 [Install]
 WantedBy=multi-user.target
