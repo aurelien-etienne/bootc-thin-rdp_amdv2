@@ -65,6 +65,7 @@ groupadd --gid 1001 admin
 useradd -u 1001 -g 1001 -G wheel -p "$admin_hashed_password" admin
 unset admin_password admin_password_confirm admin_hashed_password
 chmod 600 /home/admin/.ssh/authorized_keys
+usermod --lock root
 
 # --- User provisioning ---
 username="user"

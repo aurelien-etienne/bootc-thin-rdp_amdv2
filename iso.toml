@@ -9,16 +9,36 @@ timezone Europe/Brussels
 
 zerombr
 clearpart --all --initlabel --disklabel=gpt
-autopart --type=lvm --encrypted --passphrase=placeholder --luks-version=luks2
+autopart --type=lvm --encrypted --passphrase=PLACEHOLDER --luks-version=luks2
 
 network --bootproto=dhcp --onboot=yes --activate
 
-rootpw --lock --allow-ssh
+rootpw --plaintext --allow-ssh PLACEHOLDER
 
 reboot --eject
 
 %post --erroronfail --log=/root/anaconda-post.log
+
 systemctl set-default graphical.target
-bootc switch --mutate-in-place --transport registry <IMAGE_SIGNED> <UPDATE_IMAGE_REF>
+
+cat > /etc/systemd/system/rebase.service << 'EOF'
+[Unit]
+Description=First boot bootc switch to AlmaLinux 10
+SuccessAction=reboot
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+Restart=on-failure
+RestartSec=30
+ExecStartPre=/usr/bin/rm -f /etc/vconsole.conf /etc/locale.conf
+ExecStart=/usr/bin/bootc switch --quiet --transport registry ghcr.io/beokko/assfisc-thin-client:latest
+ExecStartPost=/usr/bin/systemctl disable rebase.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable rebase.service
 %end
 """
