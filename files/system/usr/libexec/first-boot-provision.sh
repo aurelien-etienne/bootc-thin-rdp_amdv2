@@ -199,6 +199,9 @@ else
         "$luks_device"
 fi
 
+# Pre-generate MOK hash while passphrase is still available
+mok_hash=$(mokutil --generate-hash="$passphrase")
+
 unset recovery_key passphrase passphrase_confirm
 
 luks_dump=$(cryptsetup luksDump --dump-json-metadata "$luks_device")
@@ -298,6 +301,31 @@ sed -i "s|PLACEHOLDER_RDP_ENDPOINT|${rdp_endpoint}|g" "${user_config}/krdcrc"
 sed -i "s|PLACEHOLDER_RDP_ENDPOINT|${rdp_endpoint}|g" "${user_config}/autostart/org.kde.krdc.desktop"
 
 unset rdp_endpoint user_config
+
+# --- MOK enrollment for DKMS signing key ---
+mok_cert="/etc/pki/dkms/mok.pub"
+if [[ -f "$mok_cert" ]]; then
+    mok_test_output=$(mokutil --test-key "$mok_cert" 2>&1 || true)
+    if ! echo "$mok_test_output" | grep -qi "already enrolled"; then
+        echo ""
+        echo "========================================"
+        echo "     MOK Enrollment (Secure Boot)"
+        echo "========================================"
+        echo ""
+        echo "The DKMS module signing key will be enrolled in the firmware."
+        echo "On the next reboot, the MOK Manager will ask for a password."
+        echo "Use the same passphrase you set for disk unlock."
+        echo ""
+        echo "$mok_hash" > /tmp/mok-hash
+        mokutil --import "$mok_cert" --hash-file /tmp/mok-hash
+        rm -f /tmp/mok-hash
+        echo "MOK enrollment queued for next reboot."
+        read -r -p "Press Enter to continue..."
+    else
+        echo "DKMS signing key is already enrolled in MOK."
+    fi
+fi
+unset mok_hash
 
 touch /var/lib/first-boot-provisioned
 
