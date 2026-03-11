@@ -61,8 +61,6 @@ bib_image:
 		LIBREPO=True;
 	fi;
 
-	$(PODMAN) pull $(ISO_IMAGE)
-
 	$(PODMAN) run \
 		--rm \
 		-it \
@@ -76,7 +74,7 @@ bib_image:
 		--type $(IMAGE_TYPE) \
 		--use-librepo=$$LIBREPO \
 		--progress verbose \
-		$(ISO_IMAGE)
+		$(IMAGE_NAME)
 
 iso:
 	make bib_image IMAGE_TYPE=iso
@@ -97,7 +95,6 @@ vm:
 		--osinfo almalinux10 \
 		-n $(LIBVIRT_DOMAIN) \
 		--memory 2048 \
-		--cpu IvyBridge-v2 \
 		--vcpus 2 \
 		--cdrom $(LIBVIRT_ISO) \
 		--disk $(LIBVIRT_QCOW2) \
@@ -120,7 +117,6 @@ vm-tpm:
 		--boot uefi,firmware.feature0.name=secure-boot,firmware.feature0.enabled=yes,firmware.feature1.name=enrolled-keys,firmware.feature1.enabled=no \
 		--tpm default \
 		--memory 2048 \
-		--cpu IvyBridge-v2 \
 		--vcpus 2 \
 		--cdrom $(LIBVIRT_ISO) \
 		--disk $(LIBVIRT_QCOW2) \
@@ -143,7 +139,6 @@ vm-tpm-sb:
 		--boot uefi,firmware.feature0.name=secure-boot,firmware.feature0.enabled=yes,firmware.feature1.name=enrolled-keys,firmware.feature1.enabled=yes \
 		--tpm default \
 		--memory 2048 \
-		--cpu IvyBridge-v2 \
 		--vcpus 2 \
 		--cdrom $(LIBVIRT_ISO) \
 		--disk $(LIBVIRT_QCOW2) \

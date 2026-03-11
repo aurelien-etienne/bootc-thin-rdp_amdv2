@@ -13,32 +13,13 @@ autopart --type=lvm --encrypted --passphrase=PLACEHOLDER --luks-version=luks2
 
 network --bootproto=dhcp --onboot=yes --activate
 
-rootpw --plaintext --allow-ssh PLACEHOLDER
+rootpw --lock
 
 reboot --eject
 
 %post --erroronfail --log=/root/anaconda-post.log
 
 systemctl set-default graphical.target
-
-cat > /etc/systemd/system/rebase.service << 'EOF'
-[Unit]
-Description=First boot bootc switch to AlmaLinux 10
-StartLimitIntervalSec=0
-
-[Service]
-Type=oneshot
-Restart=on-failure
-RestartSec=30
-ExecStartPre=/usr/bin/rm -f /etc/vconsole.conf /etc/locale.conf
-ExecStart=/usr/bin/bootc switch --transport registry <UPDATE_IMAGE_REF>
-ExecStartPost=/usr/bin/systemctl disable rebase.service
-ExecStartPost=/usr/bin/systemctl reboot
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable rebase.service
+bootc switch --mutate-in-place --transport registry <IMAGE_SIGNED> <UPDATE_IMAGE_REF>
 %end
 """
