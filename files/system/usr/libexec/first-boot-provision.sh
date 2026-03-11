@@ -3,6 +3,7 @@
 set -euo pipefail
 
 cleanup() {
+    dmesg --console-on 2>/dev/null || true
     [[ -f /var/lib/first-boot-provisioned ]] && return
 
     echo ""
@@ -29,6 +30,8 @@ cleanup() {
 
 trap cleanup EXIT
 
+stty sane
+clear
 setfont -d
 
 # --- Hostname ---
