@@ -45,3 +45,5 @@ for f in "${persist_files[@]}"; do
         cp "$src" "$dst"
     fi
 done
+
+chown -R "$username:$username" "/home/$username"
