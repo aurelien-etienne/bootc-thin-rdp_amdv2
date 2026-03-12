@@ -3,6 +3,7 @@
 set -euo pipefail
 
 cleanup() {
+    dmesg --console-on 2>/dev/null || true
     [[ -f /var/lib/first-boot-provisioned ]] && return
 
     echo ""
@@ -29,6 +30,9 @@ cleanup() {
 
 trap cleanup EXIT
 
+dmesg --console-off
+stty sane
+clear
 setfont -d
 
 # --- Hostname ---
@@ -187,7 +191,8 @@ else
 fi
 
 # Pre-generate MOK hash while passphrase is still available
-mok_hash=$(mokutil --generate-hash="$passphrase")
+mok_cert="/etc/pki/dkms/mok.pub"
+[[ -f "$mok_cert" ]] && mok_hash=$(mokutil --generate-hash="$passphrase")
 
 unset recovery_key passphrase passphrase_confirm
 
@@ -291,7 +296,6 @@ unset rdp_endpoint user_config
 
 # --- MOK enrollment for DKMS signing key ---
 clear
-mok_cert="/etc/pki/dkms/mok.pub"
 if [[ -f "$mok_cert" ]]; then
     mok_test_output=$(mokutil --test-key "$mok_cert" 2>&1 || true)
     if ! echo "$mok_test_output" | grep -qi "already enrolled"; then

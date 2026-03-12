@@ -5,10 +5,11 @@ set -xeuo pipefail
 username="user"
 user_display_name="Utilisateur"
 persist_files=(
-    ".config/kxkbrc"
-    ".config/krdcrc"
-    ".config/autostart/org.kde.krdc.desktop"
-    ".config/freerdp"
+    ".config/kxkbrc"                                    # keymaps & keyboard settings
+    ".config/kwinoutputconfig.json"                     # display settings
+    ".config/krdcrc"                                    # main rdp client config
+    ".config/autostart/org.kde.krdc.desktop"            # rdp client autostart config
+    ".config/freerdp"                                   # some rdp connections things, mostly certificates
 )
 persist_dir="/var/lib/user-persist"
 password_hash=$(openssl rand -base64 32 | openssl passwd -6 -stdin)
@@ -44,3 +45,5 @@ for f in "${persist_files[@]}"; do
         cp "$src" "$dst"
     fi
 done
+
+chown -R "$username:$username" "/home/$username"
